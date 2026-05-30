@@ -88,6 +88,65 @@ app.post("/api/feedback", async (req, res) => {
   }
 });
 
+// AI Reflection Generation Route
+app.post("/api/reflection", async (req, res) => {
+  const { name, keywords, emotion, length } = req.body;
+
+  if (!keywords || keywords.trim().length === 0) {
+    return res.status(400).json({ error: "키워드를 최소 하나 이상 입력해주세요." });
+  }
+
+  try {
+    const ai = getAIClient();
+
+    // Fallback if API key is not configured
+    if (!process.env.GEMINI_API_KEY) {
+      const generatedFallback = `### 🕊️ 독도 배움 융합 평화 소감문
+**작성자**: **${name || "배움이"}** 학생
+**핵심 키워드**: *${keywords}* (${emotion || "진지하고 학구적임"})
+
+이번 독도 주권 교육 센터의 입체적 아카이브를 탐구하면서, 독도 수권에 관한 진실은 소모적인 감정이나 애국주의적 구호가 아닌 명료한 역사적 증거와 논리적 사료 위에 단단히 지지되어야 함을 실감했습니다.
+
+특히 제가 마음에 남겨놓은 **'${keywords}'**에 관한 생각들이 깊어졌습니다. 대한민국 영토주권의 당위가 역사적 기정사실이자 한일 갈등의 도화선이 아닌, 동해의 해양 질서와 우호적 동반자 관계를 성숙하게 회복하는 '평화상생'의 다리가 되어야 함을 깨달았습니다.
+
+우리가 사료(태정관 지령, 세종실록지리지 등)를 객관적으로 다루는 이유는 갈등을 키우기 위함이 아니라, 잘못된 과거의 인식을 정정하고 미래로 나아가기 위한 주체적 역사관을 갈고닦기 위함입니다. 앞으로도 배운 지식에만 안주하지 않고 세계시민으로서 책임감 있는 평화 담론을 이끄는 글로벌 청소년 일원으로 성장해 나가겠습니다.`;
+
+      return res.json({ reflection: generatedFallback });
+    }
+
+    const lengthGuide = length === "short" ? "300자 내외의 깔끔하고 핵심적인 소감" : length === "long" ? "800자 내외의 풍부하고 깊이 있는 학구적 성찰문" : "500자 내외의 가장 대중적인 중등 성찰 에세이";
+
+    const systemPrompt = `당신은 독도 주권 교육 센터의 친절하고 깊이 있는 인문지리 교육 안내자(AI 영토주권 멘토)입니다. 
+학생이 입력한 이름, 키워드, 소감 톤을 바탕으로, 논리적이고 깊은 울림을 전하는 '독도 평화 수호 및 지식 습득 소감문(Reflection Essay)'을 생성해 주세요.
+
+[소감문 생성 지침]
+1. 단순 나열이나 상투적인 극단적 애국 구호를 지양하고, 역사적 사실(고사료)과 평화 공존 및 지리적 근접성 등에 기반한 성숙하며 다각적인 학생 소감문으로 작성해 주세요.
+2. 입력받은 키워드들을 자연스럽고 긴밀하게 글의 맥락에 녹여내야 합니다.
+3. 소감문은 다음과 같이 균형 있게 구성되어야 합니다:
+   - **도입 (Introduction)**: 독도 교육에 참여하며 평화적 영토 주권을 돌아보게 된 동기와 계기.
+   - **전개 (Body)**: 입력된 키워드(예: 사료 이름, 지리적 원리, 동해의 가치)를 학문적이고 객관적으로 활용한 깊은 성찰.
+   - **결론 (Conclusion)**: 한일 청소년이 미래 세대로서 갈등을 극복하고 평화와 상생의 동해를 함께 일구어 나가겠다는 성숙한 세계관과 앞으로의 다짐.
+4. 분위기 & 톤앤매너: '${emotion || "진지하고 학구적인 분위기"}'에 적극 부합하도록 진실성이 묻어나게 쓰세요.
+5. 분량 가이드: ${lengthGuide}.
+6. 작성자 명의: '${name || "배움이"}' 학생이 쓴 글로 어울리게 1인칭 시점('~저는', '~느꼈습니다')으로 작성하세요.
+7. 친화적 마크다운 포맷(제목, 볼드강조, 인용 등)을 적절히 활용하여 아름답고 품격 있는 소감문으로 완성해 제출하세요.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: `학생 이름: ${name || "배움이"}\n사용할 핵심 키워드군: ${keywords}\n소감문 톤/감정: ${emotion || "진지하고 성실함"}`,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.8,
+      }
+    });
+
+    res.json({ reflection: response.text });
+  } catch (error: any) {
+    console.error("Reflection Generation Error:", error);
+    res.status(500).json({ error: "소감문을 생성하는 중 서버 오류가 발생했습니다: " + error.message });
+  }
+});
+
 // Start integration with Vite dev server or host dist files
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

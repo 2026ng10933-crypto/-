@@ -1,4 +1,4 @@
-import { BookOpen, Compass, FileText, HelpCircle, Trophy, CheckCircle, Menu, X, HelpCircle as HelpIcon } from "lucide-react";
+import { BookOpen, Compass, FileText, HelpCircle, Trophy, CheckCircle, Menu, X, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface SidebarProps {
@@ -19,6 +19,7 @@ export default function Sidebar({ activeTab, setActiveTab, completedTopics, tota
     { id: "chapter-3", label: "3차시: 현대 갈등 & 평화 상생", icon: HelpCircle },
     { id: "quiz", label: "주권 지식 테스트 (퀴즈)", icon: Trophy },
     { id: "activity", label: "평화 공동교과서 집필관", icon: CheckCircle },
+    { id: "reflection", label: "AI 소감문 실시간 생성관", icon: Sparkles },
   ];
 
   return (

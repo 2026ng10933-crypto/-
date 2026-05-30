@@ -57,6 +57,15 @@ export default function App() {
   // Live Clock for Sil-si-gan Bento Grid module
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
+  // AI Reflection Essay Generator states
+  const [reflectionName, setReflectionName] = useState<string>("");
+  const [reflectionKeywords, setReflectionKeywords] = useState<string>("");
+  const [reflectionEmotion, setReflectionEmotion] = useState<string>("진지함");
+  const [reflectionLength, setReflectionLength] = useState<string>("medium");
+  const [isGeneratingReflection, setIsGeneratingReflection] = useState<boolean>(false);
+  const [generatedReflection, setGeneratedReflection] = useState<string>("");
+  const [reflectionError, setReflectionError] = useState<string>("");
+
   useEffect(() => {
     // Load completed topics from localstorage
     const stored = localStorage.getItem("dokdo_completed_topics");
@@ -76,6 +85,20 @@ export default function App() {
       } catch (e) {
         console.error(e);
       }
+    }
+
+    // Load generated reflection state from localstorage
+    const storedReflection = localStorage.getItem("dokdo_generated_reflection");
+    if (storedReflection) {
+      setGeneratedReflection(storedReflection);
+    }
+    const storedReflKeywords = localStorage.getItem("dokdo_refl_keywords");
+    if (storedReflKeywords) {
+      setReflectionKeywords(storedReflKeywords);
+    }
+    const storedReflName = localStorage.getItem("dokdo_refl_name");
+    if (storedReflName) {
+      setReflectionName(storedReflName);
     }
 
     const timer = setInterval(() => {
@@ -163,6 +186,45 @@ export default function App() {
       setErrorMessage("서버 통신 실패: " + err.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleGenerateReflection = async () => {
+    if (!reflectionKeywords.trim()) {
+      setReflectionError("소감문에 녹여내고 싶은 핵심 키워드를 최소 한 단어 이상 입력해 주세요.");
+      return;
+    }
+    setReflectionError("");
+    setIsGeneratingReflection(true);
+    setGeneratedReflection("");
+
+    try {
+      const response = await fetch("/api/reflection", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: reflectionName,
+          keywords: reflectionKeywords,
+          emotion: reflectionEmotion,
+          length: reflectionLength
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setGeneratedReflection(data.reflection);
+        localStorage.setItem("dokdo_generated_reflection", data.reflection);
+        localStorage.setItem("dokdo_refl_keywords", reflectionKeywords);
+        localStorage.setItem("dokdo_refl_name", reflectionName);
+      } else {
+        setReflectionError(data.error || "소감문을 자동으로 만드는 데 실패했습니다.");
+      }
+    } catch (err: any) {
+      setReflectionError("서버와의 통신에 에러가 일어났습니다: " + err.message);
+    } finally {
+      setIsGeneratingReflection(false);
     }
   };
 
@@ -372,6 +434,46 @@ export default function App() {
                   <span>{Math.round((completedTopics.length / totalTopicsCount) * 100)}% 완료</span>
                 </div>
               </div>
+            </div>
+
+            {/* AI Reflection Statement Bento Card */}
+            <div className="col-span-12 bg-gradient-to-br from-[#101014] via-[#16161a] to-[#0c0c0e] border border-zinc-800 rounded-[2.5rem] p-8 md:p-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
+              
+              <div className="space-y-4 max-w-xl z-10">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                  </span>
+                  <span className="text-[10px] text-indigo-400 font-mono font-bold tracking-widest uppercase">
+                    KOREA-JAPAN DOKDO ECOSYSTEM - REFLECTION COMPOSER
+                  </span>
+                </div>
+                
+                <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white animate-fade">
+                  실시간 AI 독도 학습 <span className="bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">소감문 자동 생성</span>
+                </h3>
+                
+                <p className="text-zinc-400 text-xs md:text-sm leading-relaxed font-semibold">
+                  본 교육 아카이브에서 배운 태정관지령, 명시적 지리 근접성, 평화상생 철학 키워드군을 선택하면, 성숙하고 논리적인 융합 학습 성찰(소감문)을 실시간으로 집필해 줍니다.
+                </p>
+                
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="text-[10px] bg-zinc-900 border border-zinc-800/85 text-zinc-400 px-2.5 py-1 rounded-full font-bold">#태정관지령</span>
+                  <span className="text-[10px] bg-zinc-900 border border-zinc-800/85 text-zinc-400 px-2.5 py-1 rounded-full font-bold">#세종실록지리지</span>
+                  <span className="text-[10px] bg-zinc-900 border border-zinc-800/85 text-zinc-400 px-2.5 py-1 rounded-full font-bold">#평화상생</span>
+                  <span className="text-[10px] bg-zinc-900 border border-zinc-800/85 text-zinc-400 px-2.5 py-1 rounded-full font-bold">#87.4km_육안가시성</span>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setActiveTab("reflection")}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-full px-7 py-3 text-xs font-black transition-all shadow-lg shadow-indigo-600/10 active:scale-95 shrink-0 z-10 flex items-center gap-2 group-hover:shadow-indigo-500/25 cursor-pointer"
+              >
+                소감문 작성하기
+                <ArrowRight className="w-4.5 h-4.5 text-indigo-200 animate-pulse" />
+              </button>
             </div>
 
           </div>
@@ -894,6 +996,271 @@ export default function App() {
                 </p>
               </div>
 
+            </div>
+
+          </div>
+        )}
+
+        {/* Tab 7: AI Reflection Essay Writer */}
+        {activeTab === "reflection" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade">
+            
+            {/* Left Column: Settings and keywords */}
+            <div className="lg:col-span-5 space-y-6">
+              
+              {/* Settings Card */}
+              <div className="bg-[#161618] border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-5 shadow-lg">
+                <div>
+                  <h3 className="text-xl font-bold text-zinc-100">소감문 설정</h3>
+                  <p className="text-xs text-zinc-500 mt-1 font-semibold">
+                    작성자 이름과 글의 전반적인 어조, 분량을 조정합니다.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-zinc-400 block">학생 이름</label>
+                    <input
+                      type="text"
+                      value={reflectionName}
+                      onChange={(e) => setReflectionName(e.target.value)}
+                      placeholder="예: 홍길동 (미입력 시 '배움이'로 지정)"
+                      className="w-full bg-zinc-900/60 border border-zinc-800 focus:border-indigo-500 rounded-xl py-2.5 px-4 text-xs text-zinc-100 focus:ring-0 placeholder:text-zinc-650 tracking-tight font-medium"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-zinc-400 block">글의 감정 선호도 및 톤</label>
+                    <select
+                      value={reflectionEmotion}
+                      onChange={(e) => setReflectionEmotion(e.target.value)}
+                      className="w-full bg-zinc-900/60 border border-zinc-800 focus:border-indigo-500 rounded-xl py-2.5 px-4 text-xs text-zinc-300 focus:ring-0 font-medium cursor-pointer"
+                    >
+                      <option value="진지하고 학구적인 분위기">진지하고 학구적인 성찰</option>
+                      <option value="미래지향적인 상생의 평화">미래지향적 공존과 평화</option>
+                      <option value="역사적 증명과 수호 다짐">고사료 증명과 수호 다짐</option>
+                      <option value="한일 세계시민으로서의 다각적 시각">글로벌 세계시민적 대조</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-zinc-400 block">희망 분량</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: "short", label: "단문 (300자)" },
+                        { id: "medium", label: "중문 (500자)" },
+                        { id: "long", label: "장문 (800자)" }
+                      ].map((len) => (
+                        <button
+                          key={len.id}
+                          onClick={() => setReflectionLength(len.id)}
+                          className={`py-2 px-3 rounded-lg text-[11px] font-bold border transition-all cursor-pointer text-center ${
+                            reflectionLength === len.id
+                              ? "bg-indigo-600/10 border-indigo-500 text-indigo-400"
+                              : "bg-zinc-900 border-zinc-850 text-zinc-500 hover:text-zinc-350"
+                          }`}
+                        >
+                          {len.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Keywords Card with Chips */}
+              <div className="bg-[#161618] border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-5 shadow-lg">
+                <div>
+                  <h3 className="text-xl font-bold text-zinc-100">핵심 소감 키워드</h3>
+                  <p className="text-xs text-zinc-500 mt-1 font-semibold">
+                    클릭하여 키워드를 즉시 추가하거나, 직접 쉼표로 구분하여 작성해 주세요.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Quick toggle chips */}
+                  <div className="space-y-2">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">추천 키워드 칩 (클릭 시 추가)</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        "태정관 지령",
+                        "세종실록지리지",
+                        "삼국접양지도",
+                        "87.4km 지리적 가시성",
+                        "동해 평화공동체",
+                        "한일 미래세대",
+                        "명료한 사료 팩트",
+                        "평화적 교류협력",
+                        "지리적 근접선",
+                        "주체적 역사 연구"
+                      ].map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => {
+                            const trimmed = reflectionKeywords.trim();
+                            if (trimmed.includes(tag)) return;
+                            const newVal = trimmed
+                              ? trimmed.endsWith(",") || trimmed.endsWith(", ")
+                                ? `${trimmed} ${tag}`
+                                : `${trimmed}, ${tag}`
+                              : tag;
+                            setReflectionKeywords(newVal);
+                          }}
+                          className="text-[10px] bg-zinc-900 hover:bg-indigo-950/40 border border-zinc-800 text-zinc-400 hover:text-indigo-400 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer active:scale-95"
+                        >
+                          + {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-zinc-400 block">설정된 키워드 목록</label>
+                    <textarea
+                      value={reflectionKeywords}
+                      onChange={(e) => setReflectionKeywords(e.target.value)}
+                      placeholder="예: 태정관 지령, 세종실록지리지, 평화상생"
+                      className="w-full bg-zinc-900/40 border border-zinc-800 focus:border-indigo-500 rounded-xl p-3 text-xs text-zinc-100 placeholder:text-zinc-650 min-h-[80px] leading-relaxed transition-all focus:ring-0 font-mono font-medium"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleGenerateReflection}
+                    disabled={isGeneratingReflection || !reflectionKeywords.trim()}
+                    className={`w-full py-3.5 px-6 rounded-2xl text-xs font-black tracking-tight transition-all inline-flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 ${
+                      isGeneratingReflection || !reflectionKeywords.trim()
+                        ? "bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-850"
+                        : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/25"
+                    }`}
+                  >
+                    {isGeneratingReflection ? (
+                      <>
+                        <span className="w-4.5 h-4.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        AI 독도 소감문 집필 중...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4.5 h-4.5 text-indigo-200" />
+                        AI 소감문 작성하기 (자동 생성)
+                      </>
+                    )}
+                  </button>
+
+                  {reflectionError && (
+                    <div className="bg-rose-500/10 border border-rose-900/30 text-rose-450 p-4.5 rounded-2xl text-xs font-semibold flex items-start gap-2">
+                      <AlertCircle className="w-4.5 h-4.5 text-rose-500 shrink-0 mt-0.5" />
+                      <span>{reflectionError}</span>
+                    </div>
+                  )}
+
+                  {reflectionKeywords && (
+                    <button
+                      onClick={() => {
+                        setReflectionKeywords("");
+                        setGeneratedReflection("");
+                        setReflectionError("");
+                      }}
+                      className="w-full py-2 px-4 rounded-xl text-xs bg-zinc-900 hover:bg-zinc-850 text-zinc-500 hover:text-zinc-300 border border-zinc-850 transition-all font-bold cursor-pointer"
+                    >
+                      키워드 내용 초기화
+                    </button>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column: AI Terminal Statement Sheet */}
+            <div className="lg:col-span-7">
+              {isGeneratingReflection ? (
+                <div className="bg-[#111112] border border-zinc-800 rounded-[2.5rem] p-8 md:p-12 space-y-6 shadow-xl relative overflow-hidden text-center h-full min-h-[460px] flex flex-col justify-center items-center">
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl"></div>
+                  
+                  <div className="space-y-4">
+                    <div className="inline-flex p-3 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400">
+                      <span className="relative flex h-5 w-5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-5 w-5 border-2 border-indigo-500/50 border-t-indigo-400 animate-spin"></span>
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <h4 className="text-lg font-bold text-white">독도 영토성찰 에세이 작성 엔진 가동</h4>
+                      <p className="text-xs text-zinc-500 font-bold uppercase font-mono tracking-wider">
+                        Gemini 3.5 High Performance Inference
+                      </p>
+                    </div>
+
+                    <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed font-semibold">
+                      학생이 선택한 배움 키워드군 <strong className="text-indigo-400 font-bold">"{reflectionKeywords}"</strong>에 관련된 영토 지리학적 사실과 평화 담론을 교차 분석하여 어조가 반영된 고품격 성찰문을 영문화·국문화 집필하고 있습니다. 잠시만 기다려주세요.
+                    </p>
+                  </div>
+                </div>
+              ) : generatedReflection ? (
+                <div className="bg-[#111112] border border-zinc-800 rounded-[2.5rem] p-6 md:p-10 space-y-6 shadow-xl relative overflow-hidden h-full flex flex-col justify-between">
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-indigo-500/10 to-transparent rounded-full blur-3xl"></div>
+                  
+                  <div className="space-y-4">
+                    {/* Header bar */}
+                    <div className="flex items-center justify-between border-b border-zinc-900 pb-4 z-10 relative">
+                      <div className="flex items-center gap-2">
+                        <CheckSquare className="w-4 h-4 text-emerald-500" />
+                        <span className="text-xs font-mono font-bold text-emerald-500 tracking-wider">
+                          DOKDO REFLECTION COMPLETED
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-zinc-500 font-bold uppercase font-mono">
+                        영토 아카이브 소감 수권서
+                      </span>
+                    </div>
+
+                    {/* Styled Document content */}
+                    <div className="border border-zinc-800 bg-[#0E0E10]/70 p-6 rounded-2xl text-zinc-300 leading-relaxed text-xs max-h-[500px] overflow-y-auto whitespace-pre-wrap font-sans space-y-4">
+                      {generatedReflection}
+                    </div>
+                  </div>
+
+                  {/* Actions buttons */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-zinc-900/60 z-10 relative">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedReflection);
+                        alert("소감문이 클립보드에 성공적으로 복사되었습니다. 숙제나 보고서 제출용으로 자유롭게 활용하세요!");
+                      }}
+                      className="bg-indigo-600/15 hover:bg-indigo-600/25 border border-indigo-500/30 text-indigo-400 hover:text-indigo-300 py-3.5 rounded-2xl text-xs font-black transition-all cursor-pointer text-center"
+                    >
+                      📋 소감문 클립보드 복사
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        const blob = new Blob([generatedReflection], { type: "text/plain;charset=utf-8" });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download = `${reflectionName || "독도배움소감문"}_소감문.txt`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white border border-zinc-800 py-3.5 rounded-2xl text-xs font-black transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      메모장 파일(.txt)로 저장
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-[#111112]/45 border border-zinc-850 border-dashed rounded-[2.5rem] p-8 md:p-12 text-center h-full min-h-[460px] flex flex-col justify-center items-center text-zinc-500">
+                  <div className="w-14 h-14 bg-zinc-900/60 border border-zinc-800 rounded-2xl flex items-center justify-center text-zinc-400 mb-4 animate-bounce">
+                    <Sparkles className="w-6 h-6 text-zinc-500" />
+                  </div>
+                  <h4 className="text-zinc-300 font-bold text-base mb-1">소감문 자동 생성 대기 중</h4>
+                  <p className="text-xs text-zinc-500 max-w-xs mx-auto leading-normal font-semibold">
+                    왼쪽 패널에서 학습 과정에서 마음에 와닿은 역사적 사료나 평화 키워드를 입력하시고, <strong className="text-zinc-400 font-semibold">'AI 소감문 작성하기'</strong> 버튼을 클릭하세요.
+                  </p>
+                </div>
+              )}
             </div>
 
           </div>
