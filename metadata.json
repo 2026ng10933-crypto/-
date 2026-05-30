@@ -1,0 +1,6 @@
+{
+  "name": "독도 영토 주권 교육 종합 센터",
+  "description": "지리적 특성, 역사적 사료 및 한일 갈등의 평화적 해결 방안을 다루는 수업 보조 자료 및 한일 학생 공동 교과서 집필 체험 학습 플랫폼입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
